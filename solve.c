@@ -318,10 +318,10 @@ int main(int argc, char *argv[])
 				  		}
 						solveEquation(y, myRank-1);
 						
-						err_check = checkError(y, myRank -1);
+						currentError = checkError(y, myRank -1);
 						
 						x[myRank-1] = y[myRank-1];
-						MPI_Send((void *)&x[myRank-1],1,MPI_FLOAT,0,err_check,MPI_COMM_WORLD);
+						MPI_Send((void *)&x[myRank-1],1,MPI_FLOAT,0,currentError,MPI_COMM_WORLD);
 					}
 				}
 				else if(numOfProcesses <= num)
@@ -349,8 +349,8 @@ int main(int argc, char *argv[])
 					  	}
 						solveEquation(y, b);
 						
-						err_check = checkError(y, b);
-						if(err_check == 0)
+						currentError = checkError(y, b);
+						if(currentError == 0)
 							tmp_error = 0;
 						
 						z[b] = y[b];						
