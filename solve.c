@@ -64,6 +64,18 @@ void check_matrix()
 }
 
 
+float* allocateFloatArray(int n)
+{
+    float* temp = (float *)malloc(n * sizeof(float)); 
+    if(!temp)
+  	{
+		printf("Cannot allocate a[%d]!\n",i);
+		exit(1);
+  	}
+	return temp;
+}
+
+
 /******************************************************/
 /* Read input from file */
 /* After this function returns:
@@ -73,6 +85,9 @@ void check_matrix()
  * num will have number of variables
  * err will have the absolute error that you need to reach
  */
+ 
+ 
+ 
 void get_input(char filename[])
 {
   FILE * fp;
@@ -96,30 +111,11 @@ void get_input(char filename[])
 	exit(1);
   }
 
- for(i = 0; i < num; i++) 
-  {
-    a[i] = (float *)malloc(num * sizeof(float)); 
-    if( !a[i])
-  	{
-		printf("Cannot allocate a[%d]!\n",i);
-		exit(1);
-  	}
-  }
+	for(i = 0; i < num; i++) 
+		a[i] = allocateFloatArray(num);
  
- x = (float *) malloc(num * sizeof(float));
- if( !x)
-  {
-	printf("Cannot allocate x!\n");
-	exit(1);
-  }
-
-
- b = (float *) malloc(num * sizeof(float));
- if( !b)
-  {
-	printf("Cannot allocate b!\n");
-	exit(1);
-  }
+	x = allocateFloatArray(num);
+	b = allocateFloatArray(num);
 
  /* Now .. Filling the blanks */ 
 
@@ -219,12 +215,7 @@ int main(int argc, char *argv[])
 		while(1)
 		{
 			float *y;
-			y = (float *) malloc(num * sizeof(float));
-	 		if( !y)
-	  		{
-				printf("Cannot allocate y!\n");
-				exit(1);
-	  		}
+			y = allocateFloatArray(num);
 			for(i=0;i<num;i++)
 				solveEquation(y,i);
 			nit++;
@@ -248,19 +239,19 @@ int main(int argc, char *argv[])
 		{
 			while(j < num)
 			{
-				j=0;
-				float *x_dummy = (float*)malloc(sizeof(float) * (num+1));
-				memcpy(x_dummy, x, sizeof(float) * num);
-				x_dummy[num] = 0;
-				MPI_Bcast((void *)x_dummy,num+1,MPI_FLOAT,0, MPI_COMM_WORLD);
+				j = 0;
+				float *tempX = (float*)malloc(sizeof(float) * (num+1));
+				memcpy(tempX, x, sizeof(float) * num);
+				tempX[num] = 0;
+				MPI_Bcast((void *)tempX,num+1,MPI_FLOAT,0, MPI_COMM_WORLD);
 			
 				if(numOfProcesses > num)
 				{
 					for(i = 0; i < num; i++)
 					{
-						float new_x;
-						MPI_Recv((void *)&new_x,1,MPI_FLOAT,MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,&stat);
-						x[stat.MPI_SOURCE -1] = new_x;
+						float updatedX;
+						MPI_Recv((void *)&updatedX,1,MPI_FLOAT,MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,&stat);
+						x[stat.MPI_SOURCE -1] = updatedX;
 						if(stat.MPI_TAG == 1)
 							j++;
 					}
@@ -268,22 +259,16 @@ int main(int argc, char *argv[])
 				}
 				else
 				{
-					j=0;
+					j = 0;
 					for(i = 0; i < numOfProcesses-1; i++)
 					{
-						float *new_x;
-						new_x = (float *) malloc(num * sizeof(float));
-						if( !new_x)
-						{
-							printf("Cannot allocate y!\n");
-							exit(1);
-						}
-						MPI_Recv((void *)new_x,num,MPI_FLOAT,MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,&stat);
+						float *updatedX = allocateFloatArray(num);
+						MPI_Recv((void *)updatedX, num, MPI_FLOAT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD,&stat);
 						for(k=(stat.MPI_SOURCE -1)*numOfDivision;k < (stat.MPI_SOURCE -1)*numOfDivision + numOfDivision ;k++)
 						{
-								if(k>=num)
+								if(k >= num)
 									break;
-								x[k] = new_x[k];
+								x[k] = updatedX[k];
 								if(stat.MPI_TAG == 1)
 									j++;
 						}
@@ -291,37 +276,31 @@ int main(int argc, char *argv[])
 					nit++;
 				}
 			}
-			float *x_dummy = (float*)malloc(sizeof(float) * (num+1));
-			x_dummy[num] = 1;
-			MPI_Bcast((void *)x_dummy,num+1,MPI_FLOAT,0, MPI_COMM_WORLD);
+			float *tempX = (float*)malloc(sizeof(float) * (num+1));
+			tempX[num] = 1;
+			MPI_Bcast((void *)tempX, num+1, MPI_FLOAT, 0, MPI_COMM_WORLD);
 		}
 		else
 		{
 			while(1)
 			{
-				float* x_dummy = (float*)malloc(sizeof(float) * (num+1));
-				MPI_Bcast((void *)x_dummy,num+1,MPI_FLOAT,0, MPI_COMM_WORLD);
-				if (x_dummy[num] == 1)
+				float* tempX = (float*)malloc(sizeof(float) * (num+1));
+				MPI_Bcast((void *)tempX, num+1, MPI_FLOAT, 0, MPI_COMM_WORLD);
+				if (tempX[num] == 1)
 					break;
-				memcpy(x, x_dummy, sizeof(float)*num);
+				memcpy(x, tempX, sizeof(float)*num);
 				
 				if(numOfProcesses > num)
 				{
 					if(myRank <= num)
 					{
-						float *y;
-						y = (float *) malloc(num * sizeof(float));
-				 		if( !y)
-				  		{
-							printf("Cannot allocate y!\n");
-							exit(1);
-				  		}
+						float *y = allocateFloatArray(num);
 						solveEquation(y, myRank-1);
 						
 						currentError = checkError(y, myRank -1);
 						
 						x[myRank-1] = y[myRank-1];
-						MPI_Send((void *)&x[myRank-1],1,MPI_FLOAT,0,currentError,MPI_COMM_WORLD);
+						MPI_Send((void *)&x[myRank-1], 1, MPI_FLOAT, 0, currentError, MPI_COMM_WORLD);
 					}
 				}
 				else if(numOfProcesses <= num)
@@ -329,33 +308,20 @@ int main(int argc, char *argv[])
 					numOfDivision = ceil((double)num/(double)(numOfProcesses-1));
 					int b;
 					int tmp_error = 1;
-					float *z;
-					z = (float *) malloc(num * sizeof(float));
-					if( !z)
-					{
-						printf("Cannot allocate y!\n");
-						exit(1);
-					}
+					float *z = allocateFloatArray(num);
 					for(b = (myRank - 1) * numOfDivision ; b < (myRank - 1) * numOfDivision + numOfDivision ; b++)
 					{
 						if(b >= num)
 							break;
-						float *y;
-						y = (float *) malloc(num * sizeof(float));
-					 	if(!y)
-					  	{
-							printf("Cannot allocate y!\n");
-							exit(1);
-					  	}
+						float *y = allocateFloatArray(num);
 						solveEquation(y, b);
 						
-						currentError = checkError(y, b);
-						if(currentError == 0)
+						if(checkError(y, b) == 0)
 							tmp_error = 0;
 						
 						z[b] = y[b];						
 					}
-					MPI_Send((void *)z,num,MPI_FLOAT,0,tmp_error,MPI_COMM_WORLD);
+					MPI_Send((void *)z, num, MPI_FLOAT, 0, tmp_error, MPI_COMM_WORLD);
 				}	
 			}
 		}	
