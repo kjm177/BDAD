@@ -181,13 +181,13 @@ void solveEquation(float* y, int myRank)
 int main(int argc, char *argv[])
 {
 
-	int i;
+	int i, j = 0, k, b;
 	int nit = 0; /* number of iterations */
 	FILE * fp;
 	char output[100] ="";
 	int comm_sz;
 	int myRank;
-	int numOfProcesses, numOfDivision;
+	int numOfProcesses, numOfDivision, currentError;
 	
 
 	if( argc != 2)
@@ -243,10 +243,10 @@ int main(int argc, char *argv[])
 	}
 	else
 	{
-		numOfDivision = ceil((double)num/(double)(num_process-1));
+		numOfDivision = ceil((double)num/(double)(numOfProcesses-1));
 		if(myRank == 0)
 		{
-			while(j<num)
+			while(j < num)
 			{
 				j=0;
 				float *x_dummy = (float*)malloc(sizeof(float) * (num+1));
@@ -254,7 +254,7 @@ int main(int argc, char *argv[])
 				x_dummy[num] = 0;
 				MPI_Bcast((void *)x_dummy,num+1,MPI_FLOAT,0, MPI_COMM_WORLD);
 			
-				if(num_process > num)
+				if(numOfProcesses > num)
 				{
 					for(i = 0; i < num; i++)
 					{
@@ -262,14 +262,14 @@ int main(int argc, char *argv[])
 						MPI_Recv((void *)&new_x,1,MPI_FLOAT,MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,&stat);
 						x[stat.MPI_SOURCE -1] = new_x;
 						if(stat.MPI_TAG == 1)
-							j++
+							j++;
 					}
 					nit++;
 				}
 				else
 				{
 					j=0;
-					for(i = 0; i < num_process-1; i++)
+					for(i = 0; i < numOfProcesses-1; i++)
 					{
 						float *new_x;
 						new_x = (float *) malloc(num * sizeof(float));
@@ -305,7 +305,7 @@ int main(int argc, char *argv[])
 					break;
 				memcpy(x, x_dummy, sizeof(float)*num);
 				
-				if(num_process > num)
+				if(numOfProcesses > num)
 				{
 					if(myRank <= num)
 					{
@@ -324,9 +324,9 @@ int main(int argc, char *argv[])
 						MPI_Send((void *)&x[myRank-1],1,MPI_FLOAT,0,err_check,MPI_COMM_WORLD);
 					}
 				}
-				else if(num_process <= num)
+				else if(numOfProcesses <= num)
 				{
-					numOfDivision = ceil((double)num/(double)(num_process-1));
+					numOfDivision = ceil((double)num/(double)(numOfProcesses-1));
 					int b;
 					int tmp_error = 1;
 					float *z;
