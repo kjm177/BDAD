@@ -69,7 +69,7 @@ float* allocateFloatArray(int n)
     float* temp = (float *)malloc(n * sizeof(float)); 
     if(!temp)
   	{
-		printf("Cannot allocate memory\n",);
+		printf("ERROR! Cannot allocate memory\n");
 		exit(1);
   	}
 	return temp;
@@ -177,13 +177,12 @@ void solveEquation(float* y, int myRank)
 int main(int argc, char *argv[])
 {
 
-	int i, j = 0, k, b;
 	int nit = 0; /* number of iterations */
 	FILE * fp;
 	char output[100] ="";
-	int comm_sz;
-	int myRank;
-	int numOfProcesses, numOfDivision, currentError;
+	
+	int i, j = 0, k, b;
+	int myRank, numOfProcesses, numOfDivision, currentError;
 	
 
 	if( argc != 2)
@@ -202,14 +201,12 @@ int main(int argc, char *argv[])
 	*/
 	check_matrix();
 
-
  
 	MPI_Init(&argc, &argv);
-	MPI_Comm_size(MPI_COMM_WORLD, &comm_sz);
+	MPI_Comm_size(MPI_COMM_WORLD, &numOfProcesses);
 	MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 	MPI_Status stat;
  
-	numOfProcesses = comm_sz;
 	if(numOfProcesses == 1)
 	{
 		while(1)
@@ -247,15 +244,8 @@ int main(int argc, char *argv[])
 			
 				if(numOfProcesses > num)
 				{
-					for(i = 0; i < num; i++)
-					{
-						float updatedX;
-						MPI_Recv((void *)&updatedX,1,MPI_FLOAT,MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,&stat);
-						x[stat.MPI_SOURCE -1] = updatedX;
-						if(stat.MPI_TAG == 1)
-							j++;
-					}
-					nit++;
+					printf("CAUTION! Number of processes > number of unknowns. \n This case is not part of lab 2.\n");
+					exit(1);
 				}
 				else
 				{
@@ -292,16 +282,8 @@ int main(int argc, char *argv[])
 				
 				if(numOfProcesses > num)
 				{
-					if(myRank <= num)
-					{
-						float *y = allocateFloatArray(num);
-						solveEquation(y, myRank-1);
-						
-						currentError = checkError(y, myRank -1);
-						
-						x[myRank-1] = y[myRank-1];
-						MPI_Send((void *)&x[myRank-1], 1, MPI_FLOAT, 0, currentError, MPI_COMM_WORLD);
-					}
+					printf("CAUTION! Number of processes > number of unknowns. \n This case is not part of lab 2.\n");
+					exit(1);
 				}
 				else if(numOfProcesses <= num)
 				{
