@@ -187,7 +187,8 @@ int main(int argc, char *argv[])
 	char output[100] ="";
 	int comm_sz;
 	int myRank;
-	int numOfProcesses;
+	int numOfProcesses, numOfDivision;
+	
 
 	if( argc != 2)
 	{
@@ -231,7 +232,7 @@ int main(int argc, char *argv[])
 			if(validError(y) != 0)
 			{
 				for(i = 0; i < num; i++)
-			       		x[i] = y[i];	
+			       	x[i] = y[i];	
 				break;
 			}
 			for(i = 0; i < num; i++)
@@ -242,10 +243,124 @@ int main(int argc, char *argv[])
 	}
 	else
 	{
-		printf("Not ready! \n");
+		numOfDivision = ceil((double)num/(double)(num_process-1));
+		if(myRank == 0)
+		{
+			while(j<num)
+			{
+				j=0;
+				float *x_dummy = (float*)malloc(sizeof(float) * (num+1));
+				memcpy(x_dummy, x, sizeof(float) * num);
+				x_dummy[num] = 0;
+				MPI_Bcast((void *)x_dummy,num+1,MPI_FLOAT,0, MPI_COMM_WORLD);
+			
+				if(num_process > num)
+				{
+					for(i = 0; i < num; i++)
+					{
+						float new_x;
+						MPI_Recv((void *)&new_x,1,MPI_FLOAT,MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,&stat);
+						x[stat.MPI_SOURCE -1] = new_x;
+						if(stat.MPI_TAG == 1)
+							j++
+					}
+					nit++;
+				}
+				else
+				{
+					j=0;
+					for(i = 0; i < num_process-1; i++)
+					{
+						float *new_x;
+						new_x = (float *) malloc(num * sizeof(float));
+						if( !new_x)
+						{
+							printf("Cannot allocate y!\n");
+							exit(1);
+						}
+						MPI_Recv((void *)new_x,num,MPI_FLOAT,MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,&stat);
+						for(k=(stat.MPI_SOURCE -1)*numOfDivision;k < (stat.MPI_SOURCE -1)*numOfDivision + numOfDivision ;k++)
+						{
+								if(k>=num)
+									break;
+								x[k] = new_x[k];
+								if(stat.MPI_TAG == 1)
+									j++;
+						}
+					}
+					nit++;
+				}
+			}
+			float *x_dummy = (float*)malloc(sizeof(float) * (num+1));
+			x_dummy[num] = 1;
+			MPI_Bcast((void *)x_dummy,num+1,MPI_FLOAT,0, MPI_COMM_WORLD);
+		}
+		else
+		{
+			while(1)
+			{
+				float* x_dummy = (float*)malloc(sizeof(float) * (num+1));
+				MPI_Bcast((void *)x_dummy,num+1,MPI_FLOAT,0, MPI_COMM_WORLD);
+				if (x_dummy[num] == 1)
+					break;
+				memcpy(x, x_dummy, sizeof(float)*num);
+				
+				if(num_process > num)
+				{
+					if(myRank <= num)
+					{
+						float *y;
+						y = (float *) malloc(num * sizeof(float));
+				 		if( !y)
+				  		{
+							printf("Cannot allocate y!\n");
+							exit(1);
+				  		}
+						solveEquation(y, myRank-1);
+						
+						err_check = checkError(y, myRank -1);
+						
+						x[myRank-1] = y[myRank-1];
+						MPI_Send((void *)&x[myRank-1],1,MPI_FLOAT,0,err_check,MPI_COMM_WORLD);
+					}
+				}
+				else if(num_process <= num)
+				{
+					numOfDivision = ceil((double)num/(double)(num_process-1));
+					int b;
+					int tmp_error = 1;
+					float *z;
+					z = (float *) malloc(num * sizeof(float));
+					if( !z)
+					{
+						printf("Cannot allocate y!\n");
+						exit(1);
+					}
+					for(b = (myRank - 1) * numOfDivision ; b < (myRank - 1) * numOfDivision + numOfDivision ; b++)
+					{
+						if(b >= num)
+							break;
+						float *y;
+						y = (float *) malloc(num * sizeof(float));
+					 	if(!y)
+					  	{
+							printf("Cannot allocate y!\n");
+							exit(1);
+					  	}
+						solveEquation(y, b);
+						
+						err_check = checkError(y, b);
+						if(err_check == 0)
+							tmp_error = 0;
+						
+						z[b] = y[b];						
+					}
+					MPI_Send((void *)z,num,MPI_FLOAT,0,tmp_error,MPI_COMM_WORLD);
+				}	
+			}
+		}	
 	}
- 
- 
+
  /* Writing results to file */
 	if(myRank == 0)
 	{
@@ -266,7 +381,6 @@ int main(int argc, char *argv[])
 	}
 
 	MPI_Finalize();
-
 	exit(0);
 
 }
