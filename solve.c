@@ -181,7 +181,7 @@ int main(int argc, char *argv[])
 	FILE * fp;
 	char output[100] ="";
 	
-	int i, j = 0, k, b;
+	int i, j = 0;
 	int myRank, numOfProcesses, numOfDivision, currentError;
 	
 
@@ -240,7 +240,7 @@ int main(int argc, char *argv[])
 				float *tempX = (float*)malloc(sizeof(float) * (num+1));
 				memcpy(tempX, x, sizeof(float) * num);
 				tempX[num] = 0;
-				MPI_Bcast((void *)tempX,num+1,MPI_FLOAT,0, MPI_COMM_WORLD);
+				MPI_Bcast((void *)tempX, num+1, MPI_FLOAT, 0, MPI_COMM_WORLD);
 			
 				if(numOfProcesses > num)
 				{
@@ -254,7 +254,8 @@ int main(int argc, char *argv[])
 					{
 						float *updatedX = allocateFloatArray(num);
 						MPI_Recv((void *)updatedX, num, MPI_FLOAT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD,&stat);
-						for(k=(stat.MPI_SOURCE -1)*numOfDivision;k < (stat.MPI_SOURCE -1)*numOfDivision + numOfDivision ;k++)
+						int k;
+						for(k = (stat.MPI_SOURCE -1)*numOfDivision; k < (stat.MPI_SOURCE -1) * numOfDivision + numOfDivision ; k++)
 						{
 								if(k >= num)
 									break;
@@ -288,22 +289,22 @@ int main(int argc, char *argv[])
 				else if(numOfProcesses <= num)
 				{
 					numOfDivision = ceil((double)num/(double)(numOfProcesses-1));
-					int b;
-					int tmp_error = 1;
+					int k;
+					int tempError = 1;
 					float *z = allocateFloatArray(num);
-					for(b = (myRank - 1) * numOfDivision ; b < (myRank - 1) * numOfDivision + numOfDivision ; b++)
+					for(k = (myRank - 1) * numOfDivision ; k < (myRank - 1) * numOfDivision + numOfDivision ; k++)
 					{
-						if(b >= num)
+						if(k >= num)
 							break;
 						float *y = allocateFloatArray(num);
-						solveEquation(y, b);
+						solveEquation(y, k);
 						
-						if(checkError(y, b) == 0)
-							tmp_error = 0;
+						if(checkError(y, k) == 0)
+							tempError = 0;
 						
-						z[b] = y[b];						
+						z[k] = y[k];						
 					}
-					MPI_Send((void *)z, num, MPI_FLOAT, 0, tmp_error, MPI_COMM_WORLD);
+					MPI_Send((void *)z, num, MPI_FLOAT, 0, tempError, MPI_COMM_WORLD);
 				}	
 			}
 		}	
