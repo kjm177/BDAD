@@ -142,7 +142,7 @@ void get_input(char filename[])
 
 int checkError(float *current, int myRank)
 {
-    if(fabs(current[myRank] - x[i])/current[myRank] > err)
+    if(fabs(current[myRank] - x[myRank])/current[myRank] > err)
             return 0;
 	return 1;
 }
@@ -168,7 +168,7 @@ void solveEquation(float* y, int myRank)
     {
         if(i != myRank)
         {
-            sum += b[myRank][i] * x[i];
+            sum += a[myRank][i] * x[i];
         }
     }
     y[myRank] = (b[myRank] - sum)/a[myRank][myRank];
@@ -209,7 +209,7 @@ int main(int argc, char *argv[])
  
 	MPI_Init(&argc, &argv);
 	MPI_Comm_size(MPI_COMM_WORLD, &comm_sz);
-	MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+	MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 	MPI_Status stat;
  
 	numOfProcesses = comm_sz;
@@ -225,19 +225,17 @@ int main(int argc, char *argv[])
 				exit(1);
 	  		}
 			for(i=0;i<num;i++)
-				solveEqn(y,i);
+				solveEquation(y,i);
 			nit++;
 			
-			if(checkErr(y) != 0){
-				for(i = 0; i < num; i++){
-						x[i] = y[i];	
-				}
+			if(validError(y) != 0)
+			{
+				for(i = 0; i < num; i++)
+			       		x[i] = y[i];	
 				break;
 			}
-			
-			for(i = 0; i < num; i++){
+			for(i = 0; i < num; i++)
 				x[i] = y[i];	
-			}
 			
 			free(y);
 		}
