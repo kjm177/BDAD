@@ -69,7 +69,7 @@ float* allocateFloatArray(int n)
     float* temp = (float *)malloc(n * sizeof(float)); 
     if(!temp)
   	{
-		printf("Cannot allocate a[%d]!\n",i);
+		printf("Cannot allocate memory\n",);
 		exit(1);
   	}
 	return temp;
